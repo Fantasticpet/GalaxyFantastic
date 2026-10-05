@@ -139,6 +139,7 @@ function startGame() {
   showFrame(heroBody, c, 0);
   select.classList.remove('active');
   game.classList.add('active');
+  if (typeof updateProfile === 'function') updateProfile();
 }
 document.getElementById('selGo').addEventListener('click', startGame);
 choose(current);
@@ -153,7 +154,7 @@ const warpFx = document.getElementById('warpFx');
 const toastEl = document.getElementById('toast');
 
 // ตำแหน่งตัวละคร / จุดหมาย เป็น 0-1 ของหน้าจอเกม
-const pos = { x: 0.5, y: 0.8 };
+const pos = { x: 0.5, y: 0.66 };
 let target = null;
 const keys = {};
 let curMap = 'field';
@@ -174,7 +175,7 @@ const MAPS = {
   field: {
     name: 'ทุ่งดอกไม้ดาว', hs: 1, speed: 1,
     bounds: { x0: .03, x1: .97, y0: .12, y1: .97 },
-    portals: [{ id: 'field_p', x: .5, y: .58, size: .30, to: 'plaza', toPortal: 'plaza_p' }],
+    portals: [{ id: 'field_p', x: .5, y: .90, size: .30, to: 'plaza', toPortal: 'plaza_p' }],
   },
   plaza: {
     name: 'จัตุรัสไข่ดาว', hs: .5, speed: .8,
@@ -189,7 +190,7 @@ const MAPS = {
       { x0: .82, x1: 1, y0: .84, y1: 1 },
       { x0: 0, x1: .10, y0: .82, y1: 1 },
     ],
-    portals: [{ id: 'plaza_p', x: .5, y: .68, size: .26, to: 'field', toPortal: 'field_p' }],
+    portals: [{ id: 'plaza_p', x: .5, y: .20, size: .26, to: 'field', toPortal: 'field_p' }],
     doors: [{ x0: .78, x1: .84, y0: .255, y1: .30, to: 'shop', spawn: { x: .495, y: .86 }, walk: { x: .495, y: .70 } }],
   },
   shop: {
@@ -375,7 +376,7 @@ async function travelPortal(p) {
   await sleep(380);
   await anim(520, (k) => { heroS = 0.1 + 0.9 * k; heroA = k; pos.y = q.sy - 0.03 + 0.03 * k; });
   heroS = 1; heroA = 1;
-  target = { x: q.sx, y: Math.min(0.95, q.sy + 0.12) };   // เดินออกจากประตูเอง
+  target = { x: q.sx, y: q.sy + (q.sy > 0.5 ? -0.14 : 0.14) };   // เดินออกจากประตูเอง (เข้าหากลางจอ)
   lock = true;
   setBusy(false);
 }
@@ -499,7 +500,7 @@ const PEN_MAX = 8;         // สัตว์ในคอกได้สูง�
 const PEN = { x0: 0.58, x1: 0.95, y0: 0.14, y1: 0.33 };   // พื้นที่ที่สัตว์เดินเล่นในคอก (0-1 ของจอ)
 
 /* ---------- เซฟ ---------- */
-let save = { eggs: 3, pets: [], nextUid: 1, coins: 500 };   // ไข่เริ่มต้น 3 ฟอง (เอาไว้ลอง)
+let save = { eggs: 3, pets: [], nextUid: 1, coins: 500, gems: 3, level: 1, xp: 0 };   // ไข่เริ่มต้น 3 ฟอง (เอาไว้ลอง)
 try {
   const raw = JSON.parse(localStorage.getItem('fp_save') || 'null');
   if (raw && Array.isArray(raw.pets)) save = Object.assign(save, raw);
@@ -731,7 +732,20 @@ const shopMsg = document.getElementById('shopMsg');
 let qty = 1;
 
 const updateCoins = () => { coinNum.textContent = save.coins; };
-updateCoins();
+const xpNeed = (lv) => 100 * lv;   // EXP ที่ต้องใช้เลื่อนจาก lv นี้ไปเลเวลถัดไป
+
+// โปรไฟล์: รูป+ชื่อตามตัวละครที่เลือก, เลเวล, แถบ EXP, เพชร
+function updateProfile() {
+  const c = CHARS[current];
+  document.getElementById('hudAvatar').style.setProperty('--av', `url("${portraitUrl(c)}")`);
+  document.getElementById('hudName').textContent = c.name;
+  document.getElementById('hudLv').textContent = 'Lv. ' + save.level;
+  const need = xpNeed(save.level);
+  document.getElementById('hudXpFill').style.width = Math.min(100, save.xp / need * 100) + '%';
+  document.getElementById('hudXpTxt').textContent = `${save.xp} / ${need}`;
+  document.getElementById('gemNum').textContent = save.gems;
+}
+updateCoins(); updateProfile();
 
 function npcFrame(f) { npcFace.style.backgroundPositionX = (f / 5 * 100) + '%'; }
 npcFrame(0);
@@ -790,3 +804,10 @@ document.getElementById('shopBuyBtn').addEventListener('click', () => {
 });
 // ใช้ทดสอบในคอนโซล: fpGiveCoins(1000)
 window.fpGiveCoins = (n = 100) => { save.coins += n; persist(); updateCoins(); };
+// ใช้ทดสอบในคอนโซล: fpGiveGems(5), fpGiveXp(50)
+window.fpGiveGems = (n = 1) => { save.gems += n; persist(); updateProfile(); };
+window.fpGiveXp = (n = 10) => {
+  save.xp += n;
+  while (save.xp >= xpNeed(save.level)) { save.xp -= xpNeed(save.level); save.level += 1; }
+  persist(); updateProfile();
+};

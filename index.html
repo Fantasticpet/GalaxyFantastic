@@ -63,8 +63,21 @@
       <div class="hero" id="hero"><span class="body sprite" id="heroBody"></span></div>
 
 
-      <!-- เหรียญ -->
-      <div id="coinHud" class="ui coin-hud"><span class="coin-ico"></span><span id="coinNum">0</span></div>
+      <!-- โปรไฟล์ / เหรียญ / เพชร (มุมซ้ายบน) -->
+      <div id="hud" class="ui hud">
+        <div class="hud-profile">
+          <div id="hudAvatar" class="hud-avatar"></div>
+          <div class="hud-info">
+            <div id="hudName" class="hud-name"></div>
+            <div class="hud-lvrow">
+              <span id="hudLv" class="hud-lv">Lv. 1</span>
+              <div class="hud-xp"><i id="hudXpFill"></i><span id="hudXpTxt">0 / 100</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="hud-pill"><span class="coin-ico"></span><b id="coinNum">0</b></div>
+        <div class="hud-pill"><span class="gem-ico"></span><b id="gemNum">0</b></div>
+      </div>
       <div id="toast" class="toast"></div>
       <div id="warpFx" class="warp-fx"></div>
       <div id="mapLoad" class="map-load">
