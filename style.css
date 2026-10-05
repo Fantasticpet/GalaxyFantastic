@@ -106,6 +106,146 @@ body{
   background:#2f7a4a url('map.png') center / 100% 100% no-repeat;
 }
 
+/* คอกสัตว์: เต็มกรอบพื้นที่เขียวขวาบน (ตำแหน่งเป็น % ของหน้าจอ) */
+.pen{
+  position:absolute;
+  left:54.2%;top:0;
+  width:45.8%;height:43%;
+  user-select:none;pointer-events:none;
+}
+.pen-img{display:block;width:100%;height:100%}
+
+/* ประตูคอก: สไปรต์ 5 เฟรม (0=ปิด ... 4=เปิดสุด) สลับเฟรมด้วย JS ตอนตัวละครเดินเข้าใกล้ */
+.gate{
+  position:absolute;
+  left:32.38%;top:54.27%;
+  width:29.39%;height:47.44%;
+  background:url('gate.png') 0% 0 / 500% 100% no-repeat;
+}
+
+/* ตัวละคร + จุดที่แตะ */
+#game{touch-action:none;cursor:pointer}
+.hero{
+  position:absolute;left:50%;top:60%;
+  width:0;height:0;pointer-events:none;
+}
+.hero .body{
+  position:absolute;left:0;bottom:0;
+  width:calc(var(--u,6px) * 24);height:calc(var(--u,6px) * 24);
+  transform:translate(-50%,3%);
+  filter:drop-shadow(0 4px 3px rgba(0,0,0,.35));
+  transform-origin:50% 100%;
+}
+.hero.left .body{transform:translate(-50%,3%) scaleX(-1)}
+
+/* สไปรต์เดิน: แถบเฟรมเรียงแนวนอน (--walk = รูป, --n = จำนวนเฟรม) เฟรมสลับด้วย JS */
+.sprite{
+  display:block;aspect-ratio:1;
+  background:var(--walk) 0 0 / calc(var(--n,8) * 100%) 100% no-repeat;
+}
+.mark{
+  position:absolute;width:0;height:0;pointer-events:none;opacity:0;
+}
+.mark::after{
+  content:"";position:absolute;left:calc(var(--u,6px) * -3);top:calc(var(--u,6px) * -1.5);
+  width:calc(var(--u,6px) * 6);height:calc(var(--u,6px) * 3);
+  border:2px solid var(--glow);border-radius:50%;
+  box-shadow:0 0 10px var(--glow);
+}
+.mark.show{animation:ping .6s ease-out}
+@keyframes ping{from{opacity:1;transform:scale(.4)}to{opacity:0;transform:scale(1.2)}}
+
 @media (prefers-reduced-motion:reduce){
-  .stars,.play{animation:none}
+  .stars,.play,.mark.show,.sel-portrait,.sel-aura{animation:none}
+}
+
+
+/* ================= หน้าเลือกตัวละคร ================= */
+#select{
+  --accent:#ff9ec7;
+  container-type:size;
+  flex-direction:row;align-items:stretch;justify-content:center;
+  gap:3cqw;padding:4cqh 4cqw;
+  background:
+    radial-gradient(ellipse at 28% 50%,color-mix(in srgb,var(--accent) 30%,transparent) 0%,transparent 58%),
+    linear-gradient(180deg,var(--dusk),var(--night) 80%);
+  transition:background .3s;
+}
+
+.sel-stage{
+  flex:1 1 0;min-width:0;
+  display:flex;align-items:center;gap:1.2cqw;
+}
+.sel-art{
+  position:relative;flex:1;min-width:0;height:100%;
+  display:flex;align-items:flex-end;justify-content:center;
+  touch-action:pan-y;
+}
+.sel-aura{
+  position:absolute;left:50%;bottom:3%;
+  width:78%;height:12%;transform:translateX(-50%);
+  border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 75%,transparent),transparent);
+  filter:blur(2px);
+}
+.sel-portrait{
+  position:relative;
+  max-width:100%;max-height:94%;object-fit:contain;
+  filter:drop-shadow(0 0 2.4cqh color-mix(in srgb,var(--accent) 65%,transparent));
+  user-select:none;
+}
+.sel-portrait.swap{animation:swapIn .3s ease-out}
+@keyframes swapIn{from{opacity:0;transform:translateY(2.5cqh) scale(.97)}to{opacity:1;transform:none}}
+
+.sel-arrow{
+  flex:none;width:9cqh;height:9cqh;max-width:44px;max-height:44px;min-width:32px;min-height:32px;
+  border:2px solid rgba(255,243,184,.45);border-radius:50%;cursor:pointer;
+  background:rgba(13,9,37,.55);color:var(--glow);
+  font:700 22px/1 var(--font-body);
+  display:grid;place-items:center;padding-bottom:3px;
+}
+.sel-arrow:active{transform:scale(.92)}
+.sel-arrow:focus-visible,.thumb:focus-visible{outline:3px solid var(--mint);outline-offset:3px}
+
+.sel-panel{
+  flex:1 1 0;min-width:0;
+  display:flex;flex-direction:column;justify-content:center;gap:2.2cqh;
+}
+.sel-head{font-size:max(12px,4.2cqh);font-weight:600;color:var(--mint)}
+.sel-name{
+  font-family:var(--font-title);font-weight:700;
+  font-size:max(26px,11cqh);line-height:1;
+  color:var(--glow);
+  text-shadow:0 0 16px color-mix(in srgb,var(--accent) 70%,transparent),0 3px 0 color-mix(in srgb,var(--accent) 55%,#1b1340);
+}
+.sel-sub{font-size:max(12px,4.4cqh);color:color-mix(in srgb,var(--accent) 65%,#fff);margin-top:-1cqh}
+
+.sel-walk{
+  height:25cqh;
+  display:flex;align-items:flex-end;justify-content:center;
+  border-radius:2cqh;
+  background:
+    radial-gradient(ellipse 36% 14% at 50% 88%,rgba(0,0,0,.4),transparent),
+    rgba(13,9,37,.38);
+  border:1px solid rgba(255,255,255,.12);
+}
+.sel-walk .sprite{height:100%;filter:drop-shadow(0 3px 2px rgba(0,0,0,.35))}
+
+.sel-thumbs{display:flex;gap:1.1cqw;justify-content:space-between}
+.thumb{
+  flex:1 1 0;min-width:0;max-width:11.5cqh;aspect-ratio:1;
+  border:2px solid rgba(255,255,255,.22);border-radius:50%;cursor:pointer;
+  background:var(--img) 50% 4% / 175% auto no-repeat,rgba(13,9,37,.6);
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+  opacity:.72;
+}
+.thumb[aria-checked="true"]{
+  opacity:1;transform:scale(1.14);
+  border-color:var(--c);box-shadow:0 0 12px var(--c);
+}
+
+.sel-go{
+  align-self:flex-start;
+  font-family:var(--font-body);font-weight:700;font-size:max(15px,5.6cqh);
+  padding:max(8px,2.4cqh) max(26px,8cqh);
 }

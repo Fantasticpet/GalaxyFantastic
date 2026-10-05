@@ -24,8 +24,39 @@
       <button id="playBtn" class="play" hidden>Play</button>
     </section>
 
+    <!-- หน้าเลือกตัวละคร (หลังกด Play) -->
+    <section id="select" class="screen" aria-label="เลือกตัวละคร">
+      <div class="sel-stage">
+        <button class="sel-arrow" id="selPrev" type="button" aria-label="ตัวก่อนหน้า">&#8249;</button>
+        <div class="sel-art" id="selArt">
+          <div class="sel-aura"></div>
+          <img id="selPortrait" class="sel-portrait" alt="" draggable="false">
+        </div>
+        <button class="sel-arrow" id="selNext" type="button" aria-label="ตัวถัดไป">&#8250;</button>
+      </div>
+
+      <div class="sel-panel">
+        <p class="sel-head">เลือกตัวละคร</p>
+        <h2 id="selName" class="sel-name"></h2>
+        <p id="selTitle" class="sel-sub"></p>
+        <div class="sel-walk" aria-hidden="true"><span id="selSprite" class="sprite"></span></div>
+        <div id="selThumbs" class="sel-thumbs" role="radiogroup" aria-label="ตัวละครทั้งหมด"></div>
+        <button id="selGo" class="play sel-go" type="button">เริ่มผจญภัย</button>
+      </div>
+    </section>
+
     <!-- หน้าเกม (โล่ง 1 เฟรมโทรศัพท์) -->
-    <section id="game" class="screen"></section>
+    <section id="game" class="screen">
+      <!-- คอกสัตว์ (พื้นที่เขียวขวาบน) -->
+      <div class="pen">
+        <img class="pen-img" src="pen.png" alt="" draggable="false">
+        <div class="gate" id="gate"></div>
+      </div>
+
+      <!-- ตัวละคร (สไปรต์เดิน ตั้งค่าโดย script.js ตามตัวที่เลือก) -->
+      <div class="mark" id="mark"></div>
+      <div class="hero" id="hero"><span class="body sprite" id="heroBody"></span></div>
+    </section>
 
 
   </main>
