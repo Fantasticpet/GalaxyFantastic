@@ -1,25 +1,35 @@
-const fill = document.getElementById('fill');
-const percentText = document.getElementById('percent');
-const loader = document.querySelector('.loader');
 const playBtn = document.getElementById('playBtn');
 const loading = document.getElementById('loading');
+const bootFrame = document.getElementById('bootFrame');
 const game = document.getElementById('game');
 const select = document.getElementById('select');
 
-let progress = 0;
+/* ---------- หน้าโหลดตอนเริ่มเกม (สไปรต์ชีต 12 เฟรม) ----------
+   เฟรม 0-8  = หลอดโหลด 0,15,30,45,55,70,85,95,100 %
+   เฟรม 9-11 = ปุ่ม PLAY (วนสลับให้เรืองแสง) */
+const BOOT_STEPS = [0, 15, 30, 45, 55, 70, 85, 95, 100];
+const BOOT_FRAMES = Array.from({ length: 12 }, (_, i) => `loading/boot_${i}.jpg`);
+const bootReady = Promise.all(BOOT_FRAMES.map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })));
 
-// โหลดจาก 1 ถึง 100% (ตอนนี้เป็นการจำลอง — เปลี่ยนเป็นโหลดรูป/เสียงจริงทีหลังได้)
+let progress = 0, bootLoaded = false;
+bootReady.then(() => { bootLoaded = true; });
+
 const timer = setInterval(() => {
   progress += Math.ceil(Math.random() * 3);
-  if (progress >= 100) progress = 100;
+  if (progress >= 100) progress = bootLoaded ? 100 : 99;   // รอรูปโหลดครบก่อนถึง 100%
 
-  fill.style.width = progress + '%';
-  percentText.textContent = progress + '%';
+  let f = 0;
+  BOOT_STEPS.forEach((t, i) => { if (progress >= t) f = i; });
+  bootFrame.src = BOOT_FRAMES[f];
 
   if (progress === 100) {
     clearInterval(timer);
-    loader.hidden = true;
+    // โชว์ปุ่ม PLAY แล้ววนเฟรม 9,10,11,10 ให้เรืองแสง
+    const glow = [9, 10, 11, 10];
+    let g = 0;
+    bootFrame.src = BOOT_FRAMES[glow[0]];
     playBtn.hidden = false;
+    setInterval(() => { g = (g + 1) % glow.length; bootFrame.src = BOOT_FRAMES[glow[g]]; }, 380);
   }
 }, 80);
 
@@ -335,11 +345,18 @@ let gateOpen = false;
 
 // หน้าโหลดตอนวาป: หลอด 0-100% (โหลดรูปแมพปลายทางจริงไปด้วย) เต็มแล้วไปต่อเอง ไม่ต้องกดอะไร
 const mapLoadEl = document.getElementById('mapLoad');
-const MAP_IMGS = { field: ['map.png', 'pen.png', 'gate.png'], plaza: ['plaza.png'], shop: ['shop.png', 'clerk_talk.png'] };
+// หน้าโหลดตอนเข้าจัตุรัสไข่ดาว (สไปรต์ชีต 6 เฟรม: 0,20,40,60,80,100 %)
+const PLAZA_STEPS = [0, 20, 40, 60, 80, 100];
+const PLAZA_FRAMES = PLAZA_STEPS.map((_, i) => `loading/plaza_${i}.jpg`);
+const MAP_IMGS = { field: ['map.png', 'pen.png', 'gate.png'], plaza: ['plaza.png', ...PLAZA_FRAMES], shop: ['shop.png', 'clerk_talk.png'] };
 async function runMapLoad(id) {
   document.getElementById('mapLoadName').textContent = MAPS[id].name;
   const fillEl = document.getElementById('mapFill'), pctEl = document.getElementById('mapPercent');
   fillEl.style.width = '0%'; pctEl.textContent = '0%';
+  const artMode = id === 'plaza';
+  const artEl = document.getElementById('mapLoadArt'), artBg = document.getElementById('mapLoadBg');
+  mapLoadEl.classList.toggle('art', artMode);
+  if (artMode) { artEl.src = PLAZA_FRAMES[0]; artBg.style.backgroundImage = `url(${PLAZA_FRAMES[0]})`; }
   mapLoadEl.classList.add('on');
   warpFx.classList.remove('on');
   let ready = false;
@@ -351,6 +368,11 @@ async function runMapLoad(id) {
     pr = Math.min(100, pr + Math.ceil(Math.random() * 4));
     if (pr >= 100 && !ready) pr = 99;       // รอรูปโหลดเสร็จก่อนค่อยถึง 100
     fillEl.style.width = pr + '%'; pctEl.textContent = pr + '%';
+    if (artMode) {
+      let f = 0;
+      PLAZA_STEPS.forEach((t, i) => { if (pr >= t) f = i; });
+      artEl.src = PLAZA_FRAMES[f]; artBg.style.backgroundImage = `url(${PLAZA_FRAMES[f]})`;
+    }
   }
   await sleep(250);
 }

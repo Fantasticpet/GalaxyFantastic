@@ -12,16 +12,13 @@
 <body>
   <main class="phone">
 
-    <!-- หน้าโหลด -->
-    <section id="loading" class="screen active">
-      <div class="stars"></div>
-      <div class="moon"></div>
-      <h1 class="title">Fantastic<br>Pet</h1>
-      <div class="loader">
-        <div class="bar"><div id="fill" class="fill"></div></div>
-        <p id="percent" class="percent">0%</p>
+    <!-- หน้าโหลดตอนเริ่มเกม (สไปรต์ชีต loading/boot_0..11.jpg) -->
+    <section id="loading" class="screen active" aria-label="กำลังโหลด">
+      <div class="boot-bg"></div>
+      <div class="boot-box">
+        <img id="bootFrame" class="boot-frame" src="loading/boot_0.jpg" alt="Fantastic Pet" draggable="false">
+        <button id="playBtn" class="boot-play" type="button" aria-label="Play" hidden></button>
       </div>
-      <button id="playBtn" class="play" hidden>Play</button>
     </section>
 
     <!-- หน้าเลือกตัวละคร (หลังกด Play) -->
@@ -81,6 +78,8 @@
       <div id="toast" class="toast"></div>
       <div id="warpFx" class="warp-fx"></div>
       <div id="mapLoad" class="map-load">
+        <div id="mapLoadBg" class="map-load-bg"></div>
+        <img id="mapLoadArt" class="map-load-art" alt="" draggable="false">
         <div class="stars"></div>
         <p id="mapLoadName" class="map-load-name"></p>
         <div class="loader">
