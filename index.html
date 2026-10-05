@@ -46,7 +46,12 @@
     </section>
 
     <!-- หน้าเกม (โล่ง 1 เฟรมโทรศัพท์) -->
-    <section id="game" class="screen">
+    <section id="game" class="screen" data-map="field">
+      <!-- ห้องในร้านไข่ (ใช้ตอนอยู่แมพ shop) -->
+      <div class="room" id="room">
+        <div class="clerk-ping" id="clerkPing">!</div>
+      </div>
+
       <!-- คอกสัตว์ (พื้นที่เขียวขวาบน) -->
       <div class="pen">
         <img class="pen-img" src="pen.png" alt="" draggable="false">
@@ -56,6 +61,105 @@
       <!-- ตัวละคร (สไปรต์เดิน ตั้งค่าโดย script.js ตามตัวที่เลือก) -->
       <div class="mark" id="mark"></div>
       <div class="hero" id="hero"><span class="body sprite" id="heroBody"></span></div>
+
+
+      <!-- เหรียญ -->
+      <div id="coinHud" class="ui coin-hud"><span class="coin-ico"></span><span id="coinNum">0</span></div>
+      <div id="toast" class="toast"></div>
+      <div id="warpFx" class="warp-fx"></div>
+      <div id="mapLoad" class="map-load">
+        <div class="stars"></div>
+        <p id="mapLoadName" class="map-load-name"></p>
+        <div class="loader">
+          <div class="bar"><div id="mapFill" class="fill"></div></div>
+          <p id="mapPercent" class="percent">0%</p>
+        </div>
+      </div>
+
+      <!-- ปุ่มกระเป๋า (กลางล่างจอ) -->
+      <button id="bagBtn" class="ui bag-btn" type="button" aria-label="เปิดกระเป๋า">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M22 18c0-7 4-11 10-11s10 4 10 11" fill="none" stroke="#7a4fd0" stroke-width="4" stroke-linecap="round"/>
+          <path d="M12 24c0-4 3-6 7-6h26c4 0 7 2 7 6l3 26c.4 4-2.600 7-7 7H16c-4.400 0-7.400-3-7-7z" fill="#ffd6ea" stroke="#7a4fd0" stroke-width="3.500" stroke-linejoin="round"/>
+          <path d="M12 30h40" stroke="#7a4fd0" stroke-width="3" stroke-linecap="round"/>
+          <rect x="27" y="27" width="10" height="9" rx="2.500" fill="#fff3b8" stroke="#7a4fd0" stroke-width="2.500"/>
+        </svg>
+        <span id="bagBadge" class="bag-badge" hidden></span>
+      </button>
+
+      <!-- หน้าต่างกระเป๋า -->
+      <div id="bagWin" class="ui bag-win" hidden>
+        <div class="bag-panel">
+          <div class="bag-head">
+            <h2>กระเป๋า</h2>
+            <span id="bagCap" class="bag-cap"></span>
+            <button id="bagClose" class="bag-x" type="button" aria-label="ปิด">&times;</button>
+          </div>
+          <div class="bag-body">
+            <div id="bagGrid" class="bag-grid"></div>
+            <div id="bagInfo" class="bag-info"></div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- บทสนทนากับพนักงานร้านไข่ -->
+      <div id="npcWin" class="ui npc-win" hidden>
+        <div class="npc-box">
+          <div id="npcFace" class="npc-face"></div>
+          <div class="npc-main">
+            <div class="npc-name">พนักงานร้านไข่</div>
+            <p id="npcText" class="npc-text"></p>
+            <div class="npc-btns">
+              <button id="npcBuy" class="bag-btn2" type="button">ซื้อไข่</button>
+              <button id="npcBye" class="bag-btn2 alt" type="button">ไว้ก่อน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าต่างขายไข่ -->
+      <div id="shopWin" class="ui bag-win" hidden>
+        <div class="bag-panel">
+          <div class="bag-head">
+            <h2>ร้านไข่ดาราจักร</h2>
+            <span id="shopCoins" class="bag-cap"></span>
+            <button id="shopClose" class="bag-x" type="button" aria-label="ปิด">&times;</button>
+          </div>
+          <div class="shop-body">
+            <div class="shop-item">
+              <div class="shop-egg" id="shopEgg"></div>
+              <span class="rar">COMMON</span>
+              <h3>ไข่ธรรมดา</h3>
+              <p>ฟักแล้วได้สัตว์สุ่ม 1 ตัว<br>จากทั้งหมด 8 ชนิด</p>
+              <p class="shop-have" id="shopHave"></p>
+            </div>
+            <div class="shop-buy">
+              <p class="shop-price">ราคา <b id="shopPrice"></b> เหรียญ / ฟอง</p>
+              <div class="shop-qty">
+                <button id="qtyMinus" class="bag-x" type="button" aria-label="ลด">&minus;</button>
+                <span id="qtyNum">1</span>
+                <button id="qtyPlus" class="bag-x" type="button" aria-label="เพิ่ม">+</button>
+              </div>
+              <p class="shop-total">รวม <b id="shopTotal"></b> เหรียญ</p>
+              <button id="shopBuyBtn" class="bag-btn2" type="button">ซื้อ</button>
+              <p id="shopMsg" class="bag-hint"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าต่างฟักไข่ -->
+      <div id="hatchWin" class="ui hatch-win" hidden>
+        <div class="hatch-glow" id="hatchGlow"></div>
+        <div class="hatch-stage"><div id="hatchEgg" class="hatch-egg"></div></div>
+        <div id="hatchText" class="hatch-text">กำลังฟักไข่...</div>
+        <div id="hatchRes" class="hatch-res" hidden>
+          <h3 id="hatchName"></h3>
+          <p id="hatchSub"></p>
+          <button id="hatchOk" class="play hatch-ok" type="button">ตกลง</button>
+        </div>
+      </div>
     </section>
 
 

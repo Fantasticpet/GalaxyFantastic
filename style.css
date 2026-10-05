@@ -128,10 +128,11 @@ body{
 .hero{
   position:absolute;left:50%;top:60%;
   width:0;height:0;pointer-events:none;
+  transform:scale(var(--s,1));transform-origin:0 0;
 }
 .hero .body{
   position:absolute;left:0;bottom:0;
-  width:calc(var(--u,6px) * 24);height:calc(var(--u,6px) * 24);
+  width:calc(var(--hu,var(--u,6px)) * 24);height:calc(var(--hu,var(--u,6px)) * 24);
   transform:translate(-50%,3%);
   filter:drop-shadow(0 4px 3px rgba(0,0,0,.35));
   transform-origin:50% 100%;
@@ -156,7 +157,7 @@ body{
 @keyframes ping{from{opacity:1;transform:scale(.4)}to{opacity:0;transform:scale(1.2)}}
 
 @media (prefers-reduced-motion:reduce){
-  .stars,.play,.mark.show,.sel-portrait,.sel-aura{animation:none}
+  .stars,.play,.mark.show,.sel-portrait,.sel-aura,.hatch-egg.shake{animation:none}
 }
 
 
@@ -249,3 +250,250 @@ body{
   font-family:var(--font-body);font-weight:700;font-size:max(15px,5.6cqh);
   padding:max(8px,2.4cqh) max(26px,8cqh);
 }
+
+
+/* ================= สัตว์เลี้ยงในคอก ================= */
+.pet{position:absolute;width:0;height:0;pointer-events:none}
+.petbody{
+  position:absolute;left:0;bottom:0;
+  width:calc(var(--u,6px) * 19);height:calc(var(--u,6px) * 19);
+  transform:translate(-50%,6%);transform-origin:50% 100%;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.3));
+}
+.pet.left .petbody{transform:translate(-50%,6%) scaleX(-1)}
+
+/* ================= ปุ่มกระเป๋า (กลางล่าง) ================= */
+.ui{z-index:3000}
+.bag-btn{
+  position:absolute;left:50%;bottom:calc(var(--u,6px) * 3 + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  width:calc(var(--u,6px) * 15);height:calc(var(--u,6px) * 15);min-width:48px;min-height:48px;
+  padding:calc(var(--u,6px) * 2.2);border:3px solid #fff3b8;border-radius:50%;cursor:pointer;
+  background:linear-gradient(180deg,#8d63e8,#5a3fb0);
+  box-shadow:0 4px 0 #35237a,0 0 18px rgba(255,158,199,.55);
+}
+.bag-btn svg{display:block;width:100%;height:100%}
+.bag-btn:active{transform:translateX(-50%) translateY(3px);box-shadow:0 1px 0 #35237a}
+.bag-badge{
+  position:absolute;top:-6%;right:-6%;min-width:calc(var(--u,6px) * 6);height:calc(var(--u,6px) * 6);
+  padding:0 5px;border-radius:99px;background:#ff5f8f;color:#fff;
+  font:700 calc(var(--u,6px) * 3.6)/calc(var(--u,6px) * 6) var(--font-body);text-align:center;
+  border:2px solid #fff;
+}
+.bag-badge[hidden]{display:none}
+
+/* ================= หน้าต่างกระเป๋า ================= */
+.bag-win,.hatch-win{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.bag-win[hidden],.hatch-win[hidden]{display:none}
+.bag-win{background:rgba(13,9,37,.62)}
+.bag-panel{
+  width:calc(var(--u,6px) * 148);max-width:96%;
+  height:calc(var(--u,6px) * 86);max-height:94%;
+  display:flex;flex-direction:column;
+  padding:calc(var(--u,6px) * 2.5);gap:calc(var(--u,6px) * 2);
+  border-radius:calc(var(--u,6px) * 4);
+  background:linear-gradient(180deg,#4a3496,#2a1d66);
+  border:3px solid rgba(255,243,184,.55);box-shadow:0 0 30px rgba(143,99,232,.5);
+}
+.bag-head{display:flex;align-items:center;gap:calc(var(--u,6px) * 2)}
+.bag-head h2{font-family:var(--font-body);font-weight:700;font-size:calc(var(--u,6px) * 5);color:var(--glow)}
+.bag-cap{margin-left:auto;font-size:calc(var(--u,6px) * 3.4);color:var(--mint);font-weight:600}
+.bag-x{
+  width:calc(var(--u,6px) * 7);height:calc(var(--u,6px) * 7);min-width:30px;min-height:30px;
+  border:2px solid rgba(255,243,184,.5);border-radius:50%;cursor:pointer;
+  background:rgba(13,9,37,.55);color:var(--glow);font:700 calc(var(--u,6px) * 5)/1 var(--font-body);
+}
+.bag-body{flex:1;min-height:0;display:flex;gap:calc(var(--u,6px) * 2.5)}
+.bag-grid{
+  flex:1;min-width:0;align-content:start;overflow:auto;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:calc(var(--u,6px) * 1.4);
+  padding:calc(var(--u,6px) * 1.4);border-radius:calc(var(--u,6px) * 2.5);background:rgba(13,9,37,.38);
+}
+.slot{
+  position:relative;aspect-ratio:1;padding:0;cursor:pointer;
+  border:2px solid rgba(255,255,255,.18);border-radius:calc(var(--u,6px) * 2);
+  background:rgba(255,255,255,.07);display:grid;place-items:center;
+}
+.slot.empty{cursor:default;opacity:.45}
+.slot.sel{border-color:var(--glow);box-shadow:0 0 12px var(--glow);background:rgba(255,243,184,.16)}
+.slot .ico{width:78%;height:78%;background:center / contain no-repeat}
+.slot .sprite{width:92%;height:92%}
+.slot .cnt{
+  position:absolute;right:4%;bottom:2%;font:700 calc(var(--u,6px) * 3.4)/1 var(--font-body);
+  color:#fff;text-shadow:0 1px 3px #000,0 0 3px #000;
+}
+.slot .tag{
+  position:absolute;left:4%;top:3%;padding:1px 5px;border-radius:99px;
+  font:600 calc(var(--u,6px) * 2.4)/1.3 var(--font-body);background:#5fd6a4;color:#12302a;
+}
+.bag-info{
+  flex:none;width:calc(var(--u,6px) * 42);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--u,6px) * 1.6);text-align:center;
+  padding:calc(var(--u,6px) * 2);border-radius:calc(var(--u,6px) * 2.5);background:rgba(13,9,37,.38);
+}
+.bag-info .big{width:calc(var(--u,6px) * 24);height:calc(var(--u,6px) * 24)}
+.bag-info .big.ico{background:center / contain no-repeat}
+.bag-info h3{font-family:var(--font-body);font-weight:700;font-size:calc(var(--u,6px) * 4.4);color:var(--glow);line-height:1.15}
+.bag-info p{font-size:calc(var(--u,6px) * 3.2);color:#d9cff7;line-height:1.3}
+.rar{
+  display:inline-block;padding:1px 10px;border-radius:99px;
+  font:700 calc(var(--u,6px) * 2.8)/1.5 var(--font-body);background:#8fb4ff;color:#14234d;
+}
+.bag-btn2{
+  padding:calc(var(--u,6px) * 1.8) calc(var(--u,6px) * 5);border:0;border-radius:99px;cursor:pointer;
+  font:700 calc(var(--u,6px) * 4)/1.2 var(--font-body);color:var(--night);
+  background:linear-gradient(180deg,var(--glow),var(--rose));box-shadow:0 3px 0 #b3568a;
+}
+.bag-btn2:active{transform:translateY(3px);box-shadow:0 0 0 #b3568a}
+.bag-btn2.alt{background:linear-gradient(180deg,#d8cffc,#9f8fe0);box-shadow:0 3px 0 #5a4aa0}
+.bag-hint{font-size:calc(var(--u,6px) * 3.4);color:#b9aee0}
+
+/* ================= ฟักไข่ ================= */
+.hatch-win{
+  flex-direction:column;gap:calc(var(--u,6px) * 1);
+  background:radial-gradient(ellipse at 50% 55%,#4a3496 0%,#1b1340 75%);z-index:3100;
+}
+.hatch-glow{
+  position:absolute;left:50%;top:48%;width:calc(var(--u,6px) * 70);height:calc(var(--u,6px) * 70);
+  transform:translate(-50%,-50%) scale(.3);opacity:0;border-radius:50%;
+  background:radial-gradient(closest-side,var(--gc,#fff3b8),transparent);pointer-events:none;
+}
+.hatch-glow.flash{animation:hflash .9s ease-out forwards}
+@keyframes hflash{0%{opacity:.95;transform:translate(-50%,-50%) scale(.3)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
+.hatch-stage{position:relative;width:calc(var(--u,6px) * 62);height:calc(var(--u,6px) * 62)}
+.hatch-egg{
+  width:100%;height:100%;
+  background:var(--hs) 0 0 / 600% 100% no-repeat;
+  filter:drop-shadow(0 0 14px rgba(255,243,184,.45));
+  transform-origin:50% 90%;
+}
+.hatch-egg.shake{animation:eshake .5s ease-in-out infinite}
+@keyframes eshake{0%,100%{transform:rotate(0)}20%{transform:rotate(-7deg)}40%{transform:rotate(7deg)}60%{transform:rotate(-5deg)}80%{transform:rotate(5deg)}}
+.hatch-egg.pop{animation:epop .45s ease-out}
+@keyframes epop{0%{transform:scale(.88)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+.hatch-text{position:relative;font-size:calc(var(--u,6px) * 4.4);font-weight:700;color:var(--glow);min-height:calc(var(--u,6px) * 6)}
+.hatch-res{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u,6px) * 1)}
+.hatch-res[hidden]{display:none}
+.hatch-res h3{font-family:var(--font-title);font-size:calc(var(--u,6px) * 7);color:var(--glow);text-shadow:0 0 16px var(--gc,#fff3b8)}
+.hatch-res p{font-size:calc(var(--u,6px) * 3.8);color:#e7defc}
+.hatch-ok{font-size:calc(var(--u,6px) * 4.6);padding:calc(var(--u,6px) * 1.6) calc(var(--u,6px) * 9);margin-top:calc(var(--u,6px) * 1);animation:none}
+
+/* หน้าจอแคบมากตอนแนวนอน: ให้ช่องกระเป๋าเหลือ 4 คอลัมน์ */
+@media (max-height:340px){ .bag-grid{grid-template-columns:repeat(4,1fr)} }
+
+
+/* ================= หลายแมพ / ประตูวาป / ร้านไข่ ================= */
+#game[data-map="plaza"]{background:#241a5c url('plaza.png') center / 100% 100% no-repeat}
+#game[data-map="shop"]{background:radial-gradient(ellipse at 50% 42%,#4a3496 0%,#1b1340 72%)}
+#game:not([data-map="field"]) .pen,
+#game:not([data-map="field"]) .pet{display:none}
+
+/* ห้องในร้าน: ขนาด/ตำแหน่งตั้งโดย JS ให้พอดีจอ */
+.room{position:absolute;display:none;pointer-events:none;background:url('shop.png') 0 0 / 100% 100% no-repeat}
+#game[data-map="shop"] .room{display:block}
+.clerk-ping{
+  position:absolute;left:70.5%;top:12%;transform:translate(-50%,0);
+  width:calc(var(--u,6px) * 5);height:calc(var(--u,6px) * 5);border-radius:50%;
+  display:grid;place-items:center;font:700 calc(var(--u,6px) * 3.4)/1 var(--font-body);
+  color:var(--night);background:var(--glow);box-shadow:0 0 12px var(--glow);
+  animation:ping2 1.1s ease-in-out infinite alternate;
+}
+@keyframes ping2{to{transform:translate(-50%,-30%)}}
+#game.busy .clerk-ping{display:none}
+
+/* ประตูวาป */
+.portal{position:absolute;pointer-events:none;transform:translate(-50%,-70%);
+  filter:drop-shadow(0 0 calc(var(--u,6px) * 2) rgba(140,120,255,.75))}
+.portal .sprite{width:100%}
+.portal::after{
+  content:"";position:absolute;left:14%;right:14%;bottom:2%;height:13%;z-index:-1;
+  border-radius:50%;background:radial-gradient(closest-side,rgba(160,140,255,.7),transparent);
+}
+.warp-fx{
+  position:absolute;inset:0;z-index:3400;pointer-events:none;opacity:0;transition:opacity .38s ease;
+  background:radial-gradient(circle at 50% 50%,#fff 0%,#b7aaff 20%,#4a32b8 52%,#120a38 100%);
+}
+.warp-fx.on{opacity:1}
+#game.busy .bag-btn{visibility:hidden}
+
+.toast{
+  position:absolute;left:50%;top:calc(var(--u,6px) * 5 + env(safe-area-inset-top));z-index:3300;
+  transform:translate(-50%,-10px);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;
+  padding:calc(var(--u,6px) * 1.4) calc(var(--u,6px) * 5);border-radius:99px;white-space:nowrap;
+  background:rgba(13,9,37,.8);border:2px solid rgba(255,243,184,.55);
+  font:700 calc(var(--u,6px) * 4)/1.2 var(--font-body);color:var(--glow);
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* เหรียญ */
+.coin-hud{
+  position:absolute;right:calc(var(--u,6px) * 3);top:calc(var(--u,6px) * 3 + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:calc(var(--u,6px) * 1.6);
+  padding:calc(var(--u,6px) * 1.2) calc(var(--u,6px) * 3.4) calc(var(--u,6px) * 1.2) calc(var(--u,6px) * 1.6);
+  border-radius:99px;background:rgba(13,9,37,.66);border:2px solid rgba(255,243,184,.5);
+  font:700 calc(var(--u,6px) * 4)/1 var(--font-body);color:var(--glow);
+}
+.coin-ico{
+  width:calc(var(--u,6px) * 5);height:calc(var(--u,6px) * 5);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff7c2,#ffcf4a 60%,#d9962a);
+  box-shadow:inset 0 0 0 2px #b8741a;
+}
+
+/* บทสนทนา */
+.npc-win{
+  position:absolute;left:0;right:0;bottom:0;inset-inline:0;display:flex;justify-content:center;
+  padding:0 2% calc(var(--u,6px) * 3 + env(safe-area-inset-bottom));pointer-events:none;z-index:3050;
+}
+.npc-win[hidden]{display:none}
+.npc-box{
+  pointer-events:auto;display:flex;align-items:flex-end;gap:calc(var(--u,6px) * 2.5);
+  width:calc(var(--u,6px) * 170);max-width:100%;
+  padding:calc(var(--u,6px) * 2.5);border-radius:calc(var(--u,6px) * 4);
+  background:linear-gradient(180deg,#4a3496,#2a1d66);
+  border:3px solid rgba(255,243,184,.55);box-shadow:0 0 30px rgba(143,99,232,.5);
+}
+.npc-face{
+  flex:none;height:calc(var(--u,6px) * 26);aspect-ratio:84 / 140;
+  background:url('clerk_talk.png') 0 0 / 600% 100% no-repeat;
+  filter:drop-shadow(0 3px 2px rgba(0,0,0,.35));
+}
+.npc-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:calc(var(--u,6px) * 1.4)}
+.npc-name{font-weight:700;font-size:calc(var(--u,6px) * 3.6);color:var(--mint)}
+.npc-text{white-space:pre-line;font-size:calc(var(--u,6px) * 4);line-height:1.4;color:#fff;min-height:calc(var(--u,6px) * 11.5)}
+.npc-btns{display:flex;gap:calc(var(--u,6px) * 2.5);justify-content:flex-end}
+
+/* หน้าต่างขายไข่ */
+.shop-body{flex:1;min-height:0;display:flex;gap:calc(var(--u,6px) * 2.5)}
+.shop-item,.shop-buy{
+  flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--u,6px) * 1.4);text-align:center;
+  padding:calc(var(--u,6px) * 2);border-radius:calc(var(--u,6px) * 2.5);background:rgba(13,9,37,.38);
+}
+.shop-egg{width:calc(var(--u,6px) * 24);height:calc(var(--u,6px) * 24);background:url('egg_common.png') center / contain no-repeat}
+.shop-item h3{font-weight:700;font-size:calc(var(--u,6px) * 4.4);color:var(--glow)}
+.shop-item p{font-size:calc(var(--u,6px) * 3.2);color:#d9cff7;line-height:1.3}
+.shop-have{color:var(--mint)!important;font-weight:600}
+.shop-price,.shop-total{font-size:calc(var(--u,6px) * 3.8);color:#fff}
+.shop-price b,.shop-total b{color:var(--glow);font-size:calc(var(--u,6px) * 4.6)}
+.shop-qty{display:flex;align-items:center;gap:calc(var(--u,6px) * 4)}
+.shop-qty .bag-x{width:calc(var(--u,6px) * 9);height:calc(var(--u,6px) * 9);min-width:36px;min-height:36px;font-size:calc(var(--u,6px) * 6)}
+.shop-qty span{min-width:calc(var(--u,6px) * 8);font:700 calc(var(--u,6px) * 6)/1 var(--font-body);color:var(--glow)}
+.bag-btn2:disabled{opacity:.45;cursor:default;box-shadow:none}
+
+/* ในร้านไข่: ย้ายปุ่มกระเป๋าไปซ้ายล่าง ไม่ให้บังประตูทางออก */
+#game[data-map="shop"] .bag-btn{left:calc(var(--u,6px) * 12)}
+
+/* หน้าโหลดตอนวาปข้ามแมพ */
+.map-load{
+  position:absolute;inset:0;z-index:3450;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:calc(var(--u,6px) * 5);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .35s ease,visibility 0s .35s;
+  background:radial-gradient(ellipse at 50% 12%,#5a3fb0 0%,transparent 55%),linear-gradient(180deg,var(--dusk),var(--night) 70%);
+}
+.map-load.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .2s ease}
+.map-load-name{
+  position:relative;font-family:var(--font-title);font-size:calc(var(--u,6px) * 7);text-align:center;
+  color:var(--glow);text-shadow:0 0 18px rgba(255,243,184,.5),0 3px 0 #7a4fd0;
+}
+.map-load .loader{width:60%;max-width:280px}

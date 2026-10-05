@@ -144,19 +144,160 @@ document.getElementById('selGo').addEventListener('click', startGame);
 choose(current);
 
 
-/* ================= ตัวละคร + ประตูคอก ================= */
+/* ================= ตัวละคร + แมพ + ประตูวาป ================= */
 const hero = document.getElementById('hero');
 const mark = document.getElementById('mark');
 const gate = document.getElementById('gate');
+const roomEl = document.getElementById('room');
+const warpFx = document.getElementById('warpFx');
+const toastEl = document.getElementById('toast');
 
 // ตำแหน่งตัวละคร / จุดหมาย เป็น 0-1 ของหน้าจอเกม
-const pos = { x: 0.5, y: 0.6 };
+const pos = { x: 0.5, y: 0.8 };
 let target = null;
 const keys = {};
+let curMap = 'field';
+let busy = false;      // กำลังวาป / คุยกับพนักงาน / เปิดร้าน -> ห้ามเดิน
+let lock = false;      // เพิ่งโผล่มาที่ประตู ต้องเดินออกห่างก่อนถึงจะวาปได้อีก
+let heroS = 1, heroA = 1;
 
 const SPEED = 0.55;        // ความเร็ว (ความสูงจอ ต่อวินาที)
-const OPEN_DIST = 0.13;    // เดินเข้าใกล้ประตูในระยะนี้ (เทียบความสูงจอ) ประตูถึงจะเปิด
+const OPEN_DIST = 0.13;    // เดินเข้าใกล้ประตูคอกในระยะนี้ ประตูถึงจะเปิด
 const GATE = { x: 0.758, y: 0.35 };   // จุดกลางประตูคอก
+const PORTAL_R = 0.055;    // เดินเข้าใกล้ประตูวาปในระยะนี้ (เทียบความสูงจอ) = วาป
+
+/* ---------- ข้อมูลแมพ ----------
+   พิกัดทั้งหมดเป็น 0-1 ของ "ภาพแมพ" (local)
+   bounds = เดินได้ในกรอบนี้, solids = สิ่งกีดขวาง (เท้าตัวละครห้ามเข้า)
+   hs = ขนาดตัวละคร, speed = ความเร็ว, doors = ประตูไปแมพอื่น */
+const MAPS = {
+  field: {
+    name: 'ทุ่งดอกไม้ดาว', hs: 1, speed: 1,
+    bounds: { x0: .03, x1: .97, y0: .12, y1: .97 },
+    portals: [{ id: 'field_p', x: .5, y: .58, size: .30, to: 'plaza', toPortal: 'plaza_p' }],
+  },
+  plaza: {
+    name: 'จัตุรัสไข่ดาว', hs: .5, speed: .8,
+    bounds: { x0: .03, x1: .97, y0: .10, y1: .96 },
+    solids: [
+      { x0: .64, x1: .965, y0: 0, y1: .25 },      // ตัวร้านไข่
+      { x0: .69, x1: .775, y0: .25, y1: .285 },   // แผงหน้าร้านซ้าย
+      { x0: .845, x1: .93, y0: .25, y1: .285 },   // แผงหน้าร้านขวา
+      { x0: .09, x1: .20, y0: .07, y1: .27 },     // น้ำพุไข่ซ้ายบน
+      { x0: .20, x1: .30, y0: .80, y1: 1 },       // น้ำพุไข่ซ้ายล่าง
+      { x0: .91, x1: 1, y0: .58, y1: .80 },       // ลูกแก้วขวาล่าง
+      { x0: .82, x1: 1, y0: .84, y1: 1 },
+      { x0: 0, x1: .10, y0: .82, y1: 1 },
+    ],
+    portals: [{ id: 'plaza_p', x: .5, y: .68, size: .26, to: 'field', toPortal: 'field_p' }],
+    doors: [{ x0: .78, x1: .84, y0: .255, y1: .30, to: 'shop', spawn: { x: .495, y: .86 }, walk: { x: .495, y: .70 } }],
+  },
+  shop: {
+    name: 'ร้านไข่ดาราจักร', hs: .62, speed: .7,
+    aspect: 1554 / 534,
+    bounds: { x0: .08, x1: .93, y0: .30, y1: .95 },
+    solids: [
+      { x0: .10, x1: .30, y0: 0, y1: .57 },       // ชั้นไข่
+      { x0: .295, x1: .335, y0: 0, y1: .48 },     // ตู้คอมพิวเตอร์
+      { x0: .19, x1: .345, y0: .59, y1: .85 },    // ม้านั่งไข่
+      { x0: .05, x1: .15, y0: .50, y1: .90 },     // ลูกแก้ว + ต้นไม้
+      { x0: .63, x1: .815, y0: 0, y1: .55 },      // เคาน์เตอร์
+      { x0: .84, x1: .93, y0: 0, y1: .57 },       // ตู้ข้างขวา
+      { x0: .80, x1: .885, y0: .58, y1: .85 },    // โต๊ะ
+      { x0: .885, x1: .96, y0: .58, y1: .82 },    // ต้นไม้ขวา
+      { x0: 0, x1: .41, y0: .84, y1: 1 },         // เหลือแค่ช่องทางเดินไปประตู
+      { x0: .59, x1: 1, y0: .84, y1: 1 },
+      { x0: .35, x1: .405, y0: .74, y1: .84 },
+      { x0: .605, x1: .65, y0: .74, y1: .84 },
+    ],
+    talk: { x0: .64, x1: .81, y0: .55, y1: .66 },   // ยืนหน้าเคาน์เตอร์ = คุยกับพนักงาน
+    exit: { x0: .44, x1: .55, y0: .88, y1: 1, to: 'plaza', spawn: { x: .81, y: .34 }, walk: { x: .81, y: .44 } },
+  },
+};
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const inR = (r, x, y) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const anim = (ms, fn) => new Promise((res) => {
+  const t0 = performance.now();
+  (function f(n) { const k = Math.min(1, (n - t0) / ms); fn(k); k < 1 ? requestAnimationFrame(f) : res(); })(t0);
+});
+
+// กรอบที่ภาพแมพวางอยู่บนจอ (0-1 ของจอ) — แมพทุ่ง/จัตุรัสยืดเต็มจอ, ร้านไข่วางกลางจอตามสัดส่วนภาพ
+function viewRect(m) {
+  if (!m.aspect) return { x: 0, y: 0, w: 1, h: 1 };
+  const W = game.clientWidth, H = game.clientHeight;
+  if (W / H >= m.aspect) { const w = H * m.aspect / W; return { x: (1 - w) / 2, y: 0, w, h: 1 }; }
+  const h = W / m.aspect / H; return { x: 0, y: (1 - h) / 2, w: 1, h };
+}
+const toL = (r, x, y) => ({ x: (x - r.x) / r.w, y: (y - r.y) / r.h });
+const toS = (r, l) => ({ x: r.x + l.x * r.w, y: r.y + l.y * r.h });
+
+function canStand(m, sx, sy) {
+  const l = toL(viewRect(m), sx, sy);
+  if (!inR(m.bounds, l.x, l.y)) return false;
+  return !(m.solids || []).some((s) => inR(s, l.x, l.y));
+}
+function moveHero(dx, dy) {
+  const m = MAPS[curMap];
+  if (canStand(m, pos.x + dx, pos.y + dy)) { pos.x += dx; pos.y += dy; return true; }
+  if (dx && canStand(m, pos.x + dx, pos.y)) { pos.x += dx; return true; }
+  if (dy && canStand(m, pos.x, pos.y + dy)) { pos.y += dy; return true; }
+  return false;
+}
+
+/* ---------- ประตูวาป (สไปรต์จาก portal_*.png แถบ 8 เฟรม) ---------- */
+const PORTAL_STRIP = { idle: 'portal_idle.png', open: 'portal_open.png', warp: 'portal_warp.png' };
+Object.values(PORTAL_STRIP).forEach((u) => { new Image().src = u; });
+const PORTALS = [];
+Object.entries(MAPS).forEach(([mid, m]) => (m.portals || []).forEach((d) => {
+  const el = document.createElement('div');
+  el.className = 'portal';
+  el.style.left = d.x * 100 + '%';
+  el.style.top = d.y * 100 + '%';
+  el.style.width = `calc(var(--u,6px) * ${d.size * 100})`;
+  el.style.zIndex = Math.round(d.y * 1000) - 1;
+  el.innerHTML = '<span class="sprite"></span>';
+  game.appendChild(el);
+  PORTALS.push({ ...d, map: mid, sx: d.x, sy: d.y, el, body: el.firstChild, state: 'idle', t0: 0, keep: false, strip: '' });
+}));
+const portalIn = (mid) => PORTALS.filter((p) => p.map === mid);
+
+function stepPortals(now) {
+  for (const p of PORTALS) {
+    if (p.map !== curMap) continue;
+    let name = p.state, f;
+    if (name === 'open') {
+      const k = (now - p.t0) / 560;
+      if (k >= 1) { p.state = p.keep ? 'warp' : 'idle'; name = p.state; }
+      f = Math.min(7, Math.floor(Math.max(0, k) * 8));
+      if (name !== 'open') f = Math.floor(now / 90) % 8;
+    } else if (name === 'warp') f = Math.floor(now / 70) % 8;
+    else f = Math.floor(now / 110) % 8;
+    if (p.strip !== name) {
+      p.strip = name;
+      p.body.style.setProperty('--walk', `url("${PORTAL_STRIP[name]}")`);
+      p.body.style.setProperty('--n', 8);
+    }
+    p.body.style.backgroundPositionX = (f / 7 * 100) + '%';
+  }
+}
+
+/* ---------- เปลี่ยนแมพ ---------- */
+function setBusy(v) { busy = v; game.classList.toggle('busy', v); }
+function showToast(t) {
+  toastEl.textContent = t;
+  toastEl.classList.add('show');
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+}
+function enterMap(id) {
+  curMap = id;
+  game.dataset.map = id;
+  PORTALS.forEach((p) => { p.el.style.display = p.map === id ? '' : 'none'; });
+  showToast(MAPS[id].name);
+}
+enterMap('field');
 
 // แปลงพิกัดนิ้ว/เมาส์ เป็นพิกัดในหน้าเกม (รองรับตอนจอถูกหมุนอัตโนมัติ)
 const rotated = () => matchMedia('(orientation:portrait) and (pointer:coarse)').matches;
@@ -167,11 +308,11 @@ function toLocal(cx, cy) {
 }
 
 game.addEventListener('pointerdown', (e) => {
+  if (busy) return;
   const p = toLocal(e.clientX, e.clientY);
-  target = {
-    x: Math.min(0.97, Math.max(0.03, p.x / game.clientWidth)),
-    y: Math.min(0.97, Math.max(0.12, p.y / game.clientHeight)),
-  };
+  const m = MAPS[curMap], r = viewRect(m), b = m.bounds;
+  const l = toL(r, p.x / game.clientWidth, p.y / game.clientHeight);
+  target = toS(r, { x: clamp(l.x, b.x0, b.x1), y: clamp(l.y, b.y0, b.y1) });
   mark.style.left = target.x * 100 + '%';
   mark.style.top = target.y * 100 + '%';
   mark.classList.remove('show'); void mark.offsetWidth; mark.classList.add('show');
@@ -180,7 +321,7 @@ game.addEventListener('pointerdown', (e) => {
 addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
 addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-// ประตู: 5 เฟรม (0 ปิด -> 4 เปิดสุด) ค่อย ๆ เปลี่ยนทีละเฟรม
+// ประตูคอก: 5 เฟรม (0 ปิด -> 4 เปิดสุด) ค่อย ๆ เปลี่ยนทีละเฟรม
 let gateFrame = 0;
 setInterval(() => {
   const want = gateOpen ? 4 : 0;
@@ -190,6 +331,73 @@ setInterval(() => {
 }, 110);
 let gateOpen = false;
 
+
+// หน้าโหลดตอนวาป: หลอด 0-100% (โหลดรูปแมพปลายทางจริงไปด้วย) เต็มแล้วไปต่อเอง ไม่ต้องกดอะไร
+const mapLoadEl = document.getElementById('mapLoad');
+const MAP_IMGS = { field: ['map.png', 'pen.png', 'gate.png'], plaza: ['plaza.png'], shop: ['shop.png', 'clerk_talk.png'] };
+async function runMapLoad(id) {
+  document.getElementById('mapLoadName').textContent = MAPS[id].name;
+  const fillEl = document.getElementById('mapFill'), pctEl = document.getElementById('mapPercent');
+  fillEl.style.width = '0%'; pctEl.textContent = '0%';
+  mapLoadEl.classList.add('on');
+  warpFx.classList.remove('on');
+  let ready = false;
+  Promise.all((MAP_IMGS[id] || []).map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })))
+    .then(() => { ready = true; });
+  let pr = 0;
+  while (pr < 100) {
+    await sleep(55);
+    pr = Math.min(100, pr + Math.ceil(Math.random() * 4));
+    if (pr >= 100 && !ready) pr = 99;       // รอรูปโหลดเสร็จก่อนค่อยถึง 100
+    fillEl.style.width = pr + '%'; pctEl.textContent = pr + '%';
+  }
+  await sleep(250);
+}
+
+/* ---------- วาปข้ามแมพ ---------- */
+// เดินเข้าประตูวาป: ตัวละครถูกดูดเข้า -> แฟลช -> เปลี่ยนแมพ -> โผล่จากประตูอีกฝั่ง
+async function travelPortal(p) {
+  setBusy(true); target = null;
+  p.state = 'open'; p.t0 = performance.now(); p.keep = true;
+  const sx = pos.x, sy = pos.y, ex = p.sx, ey = p.sy - 0.03;
+  await anim(560, (k) => { pos.x = sx + (ex - sx) * k; pos.y = sy + (ey - sy) * k; heroS = 1 - k * 0.9; heroA = 1 - k; });
+  warpFx.classList.add('on');
+  await sleep(420);
+  p.state = 'idle'; p.keep = false;
+  await runMapLoad(p.to);          // หน้าโหลด 0-100% แล้วไปต่ออัตโนมัติ
+  enterMap(p.to);
+  const q = PORTALS.find((z) => z.id === p.toPortal);
+  q.state = 'open'; q.t0 = performance.now(); q.keep = false;
+  pos.x = q.sx; pos.y = q.sy - 0.03; heroS = 0.1; heroA = 0;
+  hero.classList.remove('left');
+  warpFx.classList.remove('on');
+  mapLoadEl.classList.remove('on');
+  await sleep(380);
+  await anim(520, (k) => { heroS = 0.1 + 0.9 * k; heroA = k; pos.y = q.sy - 0.03 + 0.03 * k; });
+  heroS = 1; heroA = 1;
+  target = { x: q.sx, y: Math.min(0.95, q.sy + 0.12) };   // เดินออกจากประตูเอง
+  lock = true;
+  setBusy(false);
+}
+
+// เข้า/ออกร้านไข่: เฟดจอ -> เปลี่ยนแมพ
+async function travelDoor(d) {
+  setBusy(true); target = null;
+  warpFx.classList.add('on');
+  await sleep(400);
+  await runMapLoad(d.to);          // หน้าโหลด 0-100% แล้วไปต่ออัตโนมัติ
+  enterMap(d.to);
+  const r = viewRect(MAPS[d.to]);
+  const s = toS(r, d.spawn), w = toS(r, d.walk);
+  pos.x = s.x; pos.y = s.y; heroS = 1; heroA = 1;
+  warpFx.classList.remove('on');
+  mapLoadEl.classList.remove('on');
+  await sleep(380);
+  target = w;
+  lock = true;
+  setBusy(false);
+}
+
 let heroFrame = -1;
 let last = performance.now();
 function tick(now) {
@@ -198,30 +406,40 @@ function tick(now) {
 
   if (game.classList.contains('active')) {
     const W = game.clientWidth, H = game.clientHeight;
+    const m = MAPS[curMap];
     game.style.setProperty('--u', (H / 100) + 'px');
+    game.style.setProperty('--hu', (H / 100 * m.hs) + 'px');
 
-    // เดินตามปุ่มคีย์บอร์ด (ถ้ามี)
-    let kx = (keys['arrowright'] || keys['d'] ? 1 : 0) - (keys['arrowleft'] || keys['a'] ? 1 : 0);
-    let ky = (keys['arrowdown'] || keys['s'] ? 1 : 0) - (keys['arrowup'] || keys['w'] ? 1 : 0);
-    let moving = false, dirx = 0;
-
-    if (kx || ky) {
-      target = null;
-      const len = Math.hypot(kx, ky);
-      pos.x += (kx / len) * SPEED * dt * H / W;
-      pos.y += (ky / len) * SPEED * dt;
-      moving = true; dirx = kx;
-    } else if (target) {
-      const dx = (target.x - pos.x) * W, dy = (target.y - pos.y) * H;
-      const dist = Math.hypot(dx, dy), step = SPEED * H * dt;
-      if (dist <= step) { pos.x = target.x; pos.y = target.y; target = null; }
-      else { pos.x += (dx / dist) * step / W; pos.y += (dy / dist) * step / H; moving = true; dirx = dx; }
+    // ภาพห้องในร้านวางกลางจอ
+    if (m.aspect) {
+      const r = viewRect(m);
+      roomEl.style.left = r.x * 100 + '%'; roomEl.style.top = r.y * 100 + '%';
+      roomEl.style.width = r.w * 100 + '%'; roomEl.style.height = r.h * 100 + '%';
     }
 
-    pos.x = Math.min(0.97, Math.max(0.03, pos.x));
-    pos.y = Math.min(0.97, Math.max(0.12, pos.y));
+    let moving = false, dirx = 0;
+    if (!busy) {
+      const sp = SPEED * m.speed;
+      // เดินตามปุ่มคีย์บอร์ด (ถ้ามี)
+      const kx = (keys['arrowright'] || keys['d'] ? 1 : 0) - (keys['arrowleft'] || keys['a'] ? 1 : 0);
+      const ky = (keys['arrowdown'] || keys['s'] ? 1 : 0) - (keys['arrowup'] || keys['w'] ? 1 : 0);
+      if (kx || ky) {
+        target = null;
+        const len = Math.hypot(kx, ky);
+        moving = moveHero((kx / len) * sp * dt * H / W, (ky / len) * sp * dt);
+        dirx = kx;
+      } else if (target) {
+        const dx = (target.x - pos.x) * W, dy = (target.y - pos.y) * H;
+        const dist = Math.hypot(dx, dy), step = sp * H * dt;
+        if (dist <= step) { moveHero(target.x - pos.x, target.y - pos.y); target = null; }
+        else if (moveHero((dx / dist) * step / W, (dy / dist) * step / H)) { moving = true; dirx = dx; }
+        else target = null;   // ชนของ หยุดเดิน
+      }
+    }
     hero.style.left = pos.x * 100 + '%';
     hero.style.top = pos.y * 100 + '%';
+    hero.style.setProperty('--s', heroS);
+    hero.style.opacity = heroA;
     hero.classList.toggle('walk', moving);
     if (dirx) hero.classList.toggle('left', dirx < 0);
 
@@ -230,10 +448,345 @@ function tick(now) {
     const hf = moving ? Math.floor(now / 90) % hc.frames : 0;
     if (hf !== heroFrame) { heroFrame = hf; showFrame(heroBody, hc, hf); }
 
-    // ตัวละครเดินเข้าใกล้ประตูพอ -> เปิด / เดินออกห่าง -> ปิด
+    stepPortals(now);
+
+    // ประตูคอก (เฉพาะแมพทุ่ง): ตัวละครเดินเข้าใกล้ -> เปิด / ออกห่าง -> ปิด
     const gd = Math.hypot((pos.x - GATE.x) * W, (pos.y - GATE.y) * H);
-    gateOpen = gd < OPEN_DIST * H;
+    gateOpen = curMap === 'field' && gd < OPEN_DIST * H;
+
+    // เช็กจุดวาป / ประตูร้าน / ประตูออก / หน้าเคาน์เตอร์
+    if (!busy) {
+      const l = toL(viewRect(m), pos.x, pos.y);
+      const np = portalIn(curMap).find((p) => Math.hypot((pos.x - p.sx) * W, (pos.y - p.sy) * H) < PORTAL_R * H);
+      const door = (m.doors || []).find((d) => inR(d, l.x, l.y));
+      const ex = m.exit && inR(m.exit, l.x, l.y);
+      const talk = m.talk && inR(m.talk, l.x, l.y);
+      if (lock) { if (!np && !door && !ex && !talk) lock = false; }
+      else if (np) travelPortal(np);
+      else if (door) travelDoor(door);
+      else if (ex) travelDoor(m.exit);
+      else if (talk) { lock = true; openNpc(); }
+    }
   }
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
+
+
+/* ================= สัตว์เลี้ยง / ไข่ / กระเป๋า ================= */
+// walk = จำนวนเฟรมเดิน, fx = จำนวนเฟรมเอฟเฟกต์รอบตัว (เล่นตอนยืนนิ่ง), color = สีแสงตอนฟัก
+const ANIMALS = [
+  { id: 'starchick',     name: 'Starchick',      th: 'ลูกเจี๊ยบนทอง มีประกายดาว',        color: '#ffd45e', walk: 7, fx: 5 },
+  { id: 'moonbunny',     name: 'Moon Bunny',     th: 'กระต่ายพระจันทร์',                  color: '#b9a6ff', walk: 6, fx: 5 },
+  { id: 'cloudlamb',     name: 'Cloud Lamb',     th: 'ขนฟูเป็นก้อนเมฆ',                   color: '#a9c8ff', walk: 5, fx: 5 },
+  { id: 'dewduck',       name: 'Dew Duck',       th: 'เป็ดสีฟ้าใส มีหยดน้ำ',               color: '#6cc6ff', walk: 6, fx: 5 },
+  { id: 'twilightkitty', name: 'Twilight Kitty', th: 'แมวหูดาว',                          color: '#8f7bff', walk: 6, fx: 4 },
+  { id: 'berrypiglet',   name: 'Berry Piglet',   th: 'หมูสีชมพูแก้มเบอร์รี่',               color: '#ff8fb8', walk: 5, fx: 4 },
+  { id: 'mossturtle',    name: 'Moss Turtle',    th: 'เต่ามีมอสและดอกไม้บนกระดอง',        color: '#8fd66a', walk: 5, fx: 4 },
+  { id: 'cosmogoat',     name: 'Cosmo Goat',     th: 'แพะเขาโค้งเหมือนเสี้ยวจันทร์',       color: '#c9b8ff', walk: 6, fx: 4 },
+];
+const A_BY_ID = Object.fromEntries(ANIMALS.map((a) => [a.id, a]));
+const petWalk = (a) => `pet_${a.id}_walk.png`;
+const petFx = (a) => `pet_${a.id}_fx.png`;
+const hatchUrl = (a) => `hatch_${a.id}.png`;
+const EGG_IMG = 'egg_common.png';
+// โหลดรูปไว้ล่วงหน้า
+ANIMALS.forEach((a) => { [petWalk(a), petFx(a), hatchUrl(a)].forEach((u) => { new Image().src = u; }); });
+new Image().src = EGG_IMG;
+
+const BAG_SLOTS = 20;      // ช่องกระเป๋า (ไข่ 1 กอง = 1 ช่อง, สัตว์ 1 ตัว = 1 ช่อง)
+const PEN_MAX = 8;         // สัตว์ในคอกได้สูงสุดกี่ตัว
+const PEN = { x0: 0.58, x1: 0.95, y0: 0.14, y1: 0.33 };   // พื้นที่ที่สัตว์เดินเล่นในคอก (0-1 ของจอ)
+
+/* ---------- เซฟ ---------- */
+let save = { eggs: 3, pets: [], nextUid: 1, coins: 500 };   // ไข่เริ่มต้น 3 ฟอง (เอาไว้ลอง)
+try {
+  const raw = JSON.parse(localStorage.getItem('fp_save') || 'null');
+  if (raw && Array.isArray(raw.pets)) save = Object.assign(save, raw);
+} catch (e) {}
+const persist = () => { try { localStorage.setItem('fp_save', JSON.stringify(save)); } catch (e) {} };
+const slotsUsed = () => (save.eggs > 0 ? 1 : 0) + save.pets.length;
+// ใช้ทดสอบในคอนโซล: fpGiveEggs(5)
+window.fpGiveEggs = (n = 1) => { save.eggs += n; persist(); renderBag(); updateBadge(); };
+
+/* ---------- สัตว์เดินเล่นในคอก ---------- */
+const runtime = new Map();   // uid -> สถานะเดิน
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function syncPen() {
+  const outs = save.pets.filter((p) => p.out);
+  // เอาตัวที่เก็บเข้ากระเป๋าแล้วออก
+  for (const [uid, rt] of runtime) {
+    if (!outs.some((p) => p.uid === uid)) { rt.el.remove(); runtime.delete(uid); }
+  }
+  // เพิ่มตัวที่เพิ่งปล่อย
+  outs.forEach((p) => {
+    if (runtime.has(p.uid)) return;
+    const a = A_BY_ID[p.id];
+    const el = document.createElement('div');
+    el.className = 'pet';
+    el.innerHTML = '<span class="petbody sprite"></span>';
+    game.appendChild(el);
+    const x = rand(PEN.x0, PEN.x1), y = rand(PEN.y0, PEN.y1);
+    runtime.set(p.uid, { el, body: el.firstChild, a, x, y, tx: x, ty: y, wait: rand(0.3, 2.5), moving: false, left: false, mode: '', phase: Math.random() * 10 });
+  });
+}
+
+let lastPet = performance.now();
+function petLoop(now) {
+  const dt = Math.min(0.05, (now - lastPet) / 1000);
+  lastPet = now;
+  if (game.classList.contains('active')) {
+    const W = game.clientWidth, H = game.clientHeight;
+    for (const rt of runtime.values()) {
+      if (rt.wait > 0) {
+        rt.wait -= dt; rt.moving = false;
+        if (rt.wait <= 0) { rt.tx = rand(PEN.x0, PEN.x1); rt.ty = rand(PEN.y0, PEN.y1); }
+      } else {
+        const dx = (rt.tx - rt.x) * W, dy = (rt.ty - rt.y) * H;
+        const dist = Math.hypot(dx, dy), step = 0.075 * H * dt;
+        if (dist <= step) { rt.x = rt.tx; rt.y = rt.ty; rt.wait = rand(1.5, 4.5); rt.moving = false; }
+        else { rt.x += (dx / dist) * step / W; rt.y += (dy / dist) * step / H; rt.moving = true; if (Math.abs(dx) > 1) rt.left = dx < 0; }
+      }
+      const mode = rt.moving ? 'walk' : 'fx';
+      if (mode !== rt.mode) {
+        rt.mode = mode;
+        rt.body.style.setProperty('--walk', `url("${mode === 'walk' ? petWalk(rt.a) : petFx(rt.a)}")`);
+        rt.body.style.setProperty('--n', mode === 'walk' ? rt.a.walk : rt.a.fx);
+      }
+      const n = mode === 'walk' ? rt.a.walk : rt.a.fx;
+      const f = Math.floor(now / 1000 * (mode === 'walk' ? 9 : 6) + rt.phase) % n;
+      rt.body.style.backgroundPositionX = (n > 1 ? f / (n - 1) * 100 : 0) + '%';
+      rt.el.style.left = rt.x * 100 + '%';
+      rt.el.style.top = rt.y * 100 + '%';
+      rt.el.style.zIndex = Math.round(rt.y * 1000);
+      rt.el.classList.toggle('left', rt.left);
+    }
+    hero.style.zIndex = Math.round(pos.y * 1000);   // ตัวละครซ้อนหน้า/หลังสัตว์ตามตำแหน่ง
+  }
+  requestAnimationFrame(petLoop);
+}
+requestAnimationFrame(petLoop);
+
+/* ---------- กระเป๋า ---------- */
+const bagBtn = document.getElementById('bagBtn');
+const bagBadge = document.getElementById('bagBadge');
+const bagWin = document.getElementById('bagWin');
+const bagGrid = document.getElementById('bagGrid');
+const bagInfo = document.getElementById('bagInfo');
+const bagCap = document.getElementById('bagCap');
+let selected = null;   // 'egg' หรือ uid ของสัตว์
+
+// ปุ่ม/หน้าต่างทั้งหมดไม่ให้ไปสั่งตัวละครเดิน
+document.querySelectorAll('#game .ui').forEach((el) => {
+  el.addEventListener('pointerdown', (e) => e.stopPropagation());
+});
+
+function updateBadge() {
+  bagBadge.hidden = save.eggs <= 0;
+  bagBadge.textContent = save.eggs;
+}
+
+function spriteEl(url, n, cls = '') {
+  const s = document.createElement('span');
+  s.className = 'sprite ' + cls;
+  s.style.setProperty('--walk', `url("${url}")`);
+  s.style.setProperty('--n', n);
+  s.style.backgroundPositionX = '0%';
+  return s;
+}
+
+function renderBag() {
+  bagGrid.innerHTML = '';
+  bagCap.textContent = `${slotsUsed()} / ${BAG_SLOTS} ช่อง`;
+  if (selected === 'egg' && save.eggs <= 0) selected = null;
+  if (selected !== null && selected !== 'egg' && !save.pets.some((p) => p.uid === selected)) selected = null;
+  const items = [];
+  if (save.eggs > 0) items.push({ key: 'egg' });
+  save.pets.forEach((p) => items.push({ key: p.uid, pet: p }));
+  for (let i = 0; i < BAG_SLOTS; i++) {
+    const it = items[i];
+    const b = document.createElement('button');
+    b.type = 'button';
+    if (!it) { b.className = 'slot empty'; b.disabled = true; bagGrid.appendChild(b); continue; }
+    b.className = 'slot' + (selected === it.key ? ' sel' : '');
+    if (it.key === 'egg') {
+      const ic = document.createElement('span'); ic.className = 'ico'; ic.style.backgroundImage = `url("${EGG_IMG}")`;
+      const c = document.createElement('span'); c.className = 'cnt'; c.textContent = '×' + save.eggs;
+      b.append(ic, c);
+    } else {
+      b.appendChild(spriteEl(petWalk(A_BY_ID[it.pet.id]), A_BY_ID[it.pet.id].walk));
+      if (it.pet.out) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = 'คอก'; b.appendChild(t); }
+    }
+    b.addEventListener('click', () => { selected = it.key; renderBag(); });
+    bagGrid.appendChild(b);
+  }
+  renderInfo();
+}
+
+let infoAnim = null;   // เอฟเฟกต์เคลื่อนไหวของสัตว์ในช่องรายละเอียด
+function renderInfo() {
+  bagInfo.innerHTML = '';
+  infoAnim = null;
+  if (selected === null) {
+    bagInfo.innerHTML = '<p class="bag-hint">แตะไอเทมในกระเป๋า<br>เพื่อดูรายละเอียด</p>';
+    return;
+  }
+  if (selected === 'egg') {
+    const big = document.createElement('div'); big.className = 'big ico'; big.style.backgroundImage = `url("${EGG_IMG}")`;
+    bagInfo.innerHTML = '<span class="rar">COMMON</span><h3>ไข่ธรรมดา</h3><p>ฟักแล้วจะได้สัตว์สุ่ม 1 ตัว<br>จากทั้งหมด 8 ชนิด</p>';
+    bagInfo.prepend(big);
+    const go = document.createElement('button'); go.type = 'button'; go.className = 'bag-btn2'; go.textContent = 'ฟักไข่';
+    go.addEventListener('click', startHatch);
+    bagInfo.appendChild(go);
+    return;
+  }
+  const p = save.pets.find((q) => q.uid === selected), a = A_BY_ID[p.id];
+  const big = spriteEl(petFx(a), a.fx, 'big');
+  infoAnim = { el: big, n: a.fx };
+  bagInfo.innerHTML = `<span class="rar">COMMON</span><h3>${a.name}</h3><p>${a.th}</p>`;
+  bagInfo.prepend(big);
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'bag-btn2' + (p.out ? ' alt' : '');
+  btn.textContent = p.out ? 'เก็บเข้ากระเป๋า' : 'ปล่อยลงคอก';
+  btn.addEventListener('click', () => {
+    if (!p.out && save.pets.filter((q) => q.out).length >= PEN_MAX) { alert(`คอกเต็มแล้ว (สูงสุด ${PEN_MAX} ตัว)`); return; }
+    p.out = !p.out; persist(); syncPen(); renderBag();
+  });
+  bagInfo.appendChild(btn);
+}
+setInterval(() => {
+  if (!infoAnim || bagWin.hidden) return;
+  const f = Math.floor(performance.now() / 160) % infoAnim.n;
+  infoAnim.el.style.backgroundPositionX = (infoAnim.n > 1 ? f / (infoAnim.n - 1) * 100 : 0) + '%';
+}, 80);
+
+bagBtn.addEventListener('click', () => { bagWin.hidden = false; renderBag(); });
+document.getElementById('bagClose').addEventListener('click', () => { bagWin.hidden = true; });
+bagWin.addEventListener('click', (e) => { if (e.target === bagWin) bagWin.hidden = true; });
+
+/* ---------- ฟักไข่ ---------- */
+const hatchWin = document.getElementById('hatchWin');
+const hatchEgg = document.getElementById('hatchEgg');
+const hatchGlow = document.getElementById('hatchGlow');
+const hatchText = document.getElementById('hatchText');
+const hatchRes = document.getElementById('hatchRes');
+let hatching = false;
+
+function setHatchFrame(f) { hatchEgg.style.backgroundPositionX = (f / 5 * 100) + '%'; }
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function startHatch() {
+  if (hatching || save.eggs <= 0) return;
+  hatching = true;
+  // สุ่มสัตว์ แล้วเซฟก่อนเล่นอนิเมชัน (ปิดแอปกลางคันก็ไม่เสียไข่ฟรี)
+  const a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  save.eggs -= 1;
+  const pet = { uid: save.nextUid++, id: a.id, out: save.pets.filter((p) => p.out).length < PEN_MAX };
+  save.pets.push(pet);
+  persist(); updateBadge();
+
+  hatchWin.hidden = false; hatchRes.hidden = true;
+  hatchWin.style.setProperty('--gc', a.color);
+  hatchEgg.style.setProperty('--hs', `url("${hatchUrl(a)}")`);
+  hatchGlow.classList.remove('flash');
+  hatchText.textContent = 'ไข่กำลังสั่น...';
+  setHatchFrame(0);
+  hatchEgg.className = 'hatch-egg shake';
+  await wait(1300);
+  hatchText.textContent = 'ไข่เริ่มแตก!';
+  for (let f = 1; f <= 4; f++) {
+    setHatchFrame(f);
+    hatchEgg.classList.toggle('shake', f < 4);
+    await wait(f < 4 ? 650 : 750);
+  }
+  hatchEgg.className = 'hatch-egg';
+  void hatchGlow.offsetWidth; hatchGlow.classList.add('flash');
+  setHatchFrame(5);
+  void hatchEgg.offsetWidth; hatchEgg.classList.add('pop');
+  hatchText.textContent = '';
+  await wait(900);
+  document.getElementById('hatchName').textContent = a.name;
+  document.getElementById('hatchSub').textContent = a.th + (pet.out ? ' · ปล่อยลงคอกแล้ว' : ' · เก็บไว้ในกระเป๋า (คอกเต็ม)');
+  hatchRes.hidden = false;
+  selected = pet.uid;
+}
+document.getElementById('hatchOk').addEventListener('click', () => {
+  hatchWin.hidden = true; hatching = false;
+  syncPen(); renderBag();
+});
+
+// เริ่มเกม: แสดงสัตว์ที่ปล่อยไว้ + ตัวเลขบนปุ่มกระเป๋า
+syncPen(); updateBadge();
+
+
+/* ================= พนักงานร้านไข่ + ซื้อไข่ ================= */
+const EGG_PRICE = 100;   // ราคาไข่ต่อฟอง (เหรียญ)
+const coinNum = document.getElementById('coinNum');
+const npcWin = document.getElementById('npcWin');
+const npcFace = document.getElementById('npcFace');
+const npcText = document.getElementById('npcText');
+const shopWin = document.getElementById('shopWin');
+const qtyNum = document.getElementById('qtyNum');
+const shopMsg = document.getElementById('shopMsg');
+let qty = 1;
+
+const updateCoins = () => { coinNum.textContent = save.coins; };
+updateCoins();
+
+function npcFrame(f) { npcFace.style.backgroundPositionX = (f / 5 * 100) + '%'; }
+npcFrame(0);
+
+const NPC_LINES = [
+  'ยินดีต้อนรับสู่ร้านไข่ดาราจักรค่ะ! ✨\nวันนี้จะรับไข่สักฟองไหมคะ? ฟักแล้วได้สัตว์เลี้ยงสุ่มเลยนะ',
+];
+let npcTimer = null;
+function openNpc() {
+  setBusy(true); target = null;
+  npcWin.hidden = false;
+  const line = NPC_LINES[Math.floor(Math.random() * NPC_LINES.length)];
+  let i = 0;
+  npcText.textContent = '';
+  clearInterval(npcTimer);
+  npcTimer = setInterval(() => {
+    i++;
+    npcText.textContent = line.slice(0, i);
+    npcFrame(Math.floor(i / 3) % 4);   // พนักงานขยับปากตอนพูด
+    if (i >= line.length) { clearInterval(npcTimer); npcFrame(1); }
+  }, 32);
+}
+function closeNpc() { clearInterval(npcTimer); npcWin.hidden = true; }
+document.getElementById('npcBye').addEventListener('click', () => { closeNpc(); setBusy(false); });
+document.getElementById('npcBuy').addEventListener('click', () => { closeNpc(); openShop(); });
+
+function renderShop() {
+  const maxQty = Math.max(1, Math.floor(save.coins / EGG_PRICE));
+  qty = clamp(qty, 1, Math.min(99, maxQty));
+  const total = qty * EGG_PRICE;
+  document.getElementById('shopCoins').textContent = `เหรียญ ${save.coins}`;
+  document.getElementById('shopPrice').textContent = EGG_PRICE;
+  document.getElementById('shopHave').textContent = `ในกระเป๋า: ไข่ ×${save.eggs}`;
+  qtyNum.textContent = qty;
+  document.getElementById('shopTotal').textContent = total;
+  const btn = document.getElementById('shopBuyBtn');
+  const noCoin = save.coins < total;
+  const noSlot = save.eggs <= 0 && slotsUsed() >= BAG_SLOTS;
+  btn.disabled = noCoin || noSlot;
+  shopMsg.textContent = noCoin ? 'เหรียญไม่พอ' : noSlot ? 'กระเป๋าเต็ม' : '';
+}
+function openShop() { qty = 1; shopMsg.textContent = ''; renderShop(); shopWin.hidden = false; }
+function closeShop() { shopWin.hidden = true; setBusy(false); }
+document.getElementById('shopClose').addEventListener('click', closeShop);
+shopWin.addEventListener('click', (e) => { if (e.target === shopWin) closeShop(); });
+document.getElementById('qtyMinus').addEventListener('click', () => { qty -= 1; renderShop(); });
+document.getElementById('qtyPlus').addEventListener('click', () => { qty += 1; renderShop(); });
+document.getElementById('shopBuyBtn').addEventListener('click', () => {
+  const total = qty * EGG_PRICE;
+  if (save.coins < total) return;
+  if (save.eggs <= 0 && slotsUsed() >= BAG_SLOTS) return;
+  save.coins -= total; save.eggs += qty;
+  persist(); updateCoins(); updateBadge(); renderBag();
+  showToast(`ซื้อไข่ ×${qty} แล้ว`);
+  qty = 1; renderShop();
+});
+// ใช้ทดสอบในคอนโซล: fpGiveCoins(1000)
+window.fpGiveCoins = (n = 100) => { save.coins += n; persist(); updateCoins(); };
