@@ -45,8 +45,8 @@ const CHARS = [
   { id: 'zenith', name: 'Zenith', title: 'Astral Guardian',   color: '#5fd6a4', frames: 6  },
   { id: 'noctis', name: 'Noctis', title: 'Eclipse Rogue',     color: '#a79bc4', frames: 8  },
 ];
-const portraitUrl = (c) => `chars/portrait_${c.id}.png`;
-const walkUrl = (c) => `chars/walk_${c.id}.png`;
+const portraitUrl = (c) => `portrait_${c.id}.png`;
+const walkUrl = (c) => `walk_${c.id}.png`;
 
 // โหลดรูปไว้ล่วงหน้า จะได้ไม่กระตุกตอนสลับตัว
 CHARS.forEach((c) => { new Image().src = portraitUrl(c); new Image().src = walkUrl(c); });
