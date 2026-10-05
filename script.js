@@ -8,7 +8,7 @@ const select = document.getElementById('select');
    เฟรม 0-8  = หลอดโหลด 0,15,30,45,55,70,85,95,100 %
    เฟรม 9-11 = ปุ่ม PLAY (วนสลับให้เรืองแสง) */
 const BOOT_STEPS = [0, 15, 30, 45, 55, 70, 85, 95, 100];
-const BOOT_FRAMES = Array.from({ length: 12 }, (_, i) => `loading/boot_${i}.jpg`);
+const BOOT_FRAMES = Array.from({ length: 12 }, (_, i) => `loadboot_${i}.jpg`);
 const bootReady = Promise.all(BOOT_FRAMES.map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })));
 
 let progress = 0, bootLoaded = false;
@@ -347,7 +347,7 @@ let gateOpen = false;
 const mapLoadEl = document.getElementById('mapLoad');
 // หน้าโหลดตอนเข้าจัตุรัสไข่ดาว (สไปรต์ชีต 6 เฟรม: 0,20,40,60,80,100 %)
 const PLAZA_STEPS = [0, 20, 40, 60, 80, 100];
-const PLAZA_FRAMES = PLAZA_STEPS.map((_, i) => `loading/plaza_${i}.jpg`);
+const PLAZA_FRAMES = PLAZA_STEPS.map((_, i) => `loadplaza_${i}.jpg`);
 const MAP_IMGS = { field: ['map.png', 'pen.png', 'gate.png'], plaza: ['plaza.png', ...PLAZA_FRAMES], shop: ['shop.png', 'clerk_talk.png'] };
 async function runMapLoad(id) {
   document.getElementById('mapLoadName').textContent = MAPS[id].name;
