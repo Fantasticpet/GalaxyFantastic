@@ -103,26 +103,7 @@ body{
 /* หน้าเกม */
 #game{
   padding:0;overflow:hidden;
-  background:#2f7a4a;
-  container-type:size;
-}
-/* โลกของเกม: สัดส่วนเท่าภาพแมพ (1141x982) ขยายให้เต็มจอ จัดกึ่งกลาง
-   วางของด้วย % เพื่อให้อยู่ตรงช่องเดิมทุกขนาดหน้าจอ */
-.world{
-  position:absolute;left:50%;top:50%;
-  width:max(100cqw,calc(100cqh * 1141 / 982));
-  aspect-ratio:1141 / 982;
-  transform:translate(-50%,-50%);
-  background:url('map.png') center / 100% 100% no-repeat;
-}
-/* คอกสัตว์แนวนอน: เต็มพื้นที่เขียวขวาบน (กึ่งกลางช่อง x78.4% y21.7%) */
-.pen{
-  position:absolute;
-  left:78.4%;top:21.7%;
-  width:41.4%;height:40%;
-  object-fit:fill;
-  transform:translate(-50%,-50%);
-  user-select:none;pointer-events:none;
+  background:#2f7a4a url('map.png') center / 100% 100% no-repeat;
 }
 
 @media (prefers-reduced-motion:reduce){
