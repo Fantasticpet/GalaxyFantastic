@@ -1,37 +1,56 @@
 const playBtn = document.getElementById('playBtn');
 const loading = document.getElementById('loading');
-const bootFrame = document.getElementById('bootFrame');
+const bootCanvas = document.getElementById('bootFrame');
 const game = document.getElementById('game');
 const select = document.getElementById('select');
 
-/* ---------- หน้าโหลดตอนเริ่มเกม (สไปรต์ชีต 12 เฟรม) ----------
-   เฟรม 0-8  = หลอดโหลด 0,15,30,45,55,70,85,95,100 %
-   เฟรม 9-11 = ปุ่ม PLAY (วนสลับให้เรืองแสง) */
-const BOOT_STEPS = [0, 15, 30, 45, 55, 70, 85, 95, 100];
-const BOOT_FRAMES = Array.from({ length: 12 }, (_, i) => `loadboot_${i}.jpg`);
-const bootReady = Promise.all(BOOT_FRAMES.map((u) => new Promise((r) => { const i = new Image(); i.onload = i.onerror = r; i.src = u; })));
+/* ---------- หน้าโหลดตอนเริ่มเกม (สไปรต์ชีต 23 เฟรม) ----------
+   เฟรม 0-16  = หลอดโหลด 0% -> 100% (มีเฟรมเบลนด์คั่นกลางไว้แล้ว)
+   เฟรม 17    = ช่วงเปลี่ยนจากหลอดเป็นปุ่ม PLAY
+   เฟรม 18-22 = ปุ่ม PLAY เรืองแสง (วนไปกลับ)
+   หลอดเดินตามเวลาจริง (requestAnimationFrame) ไม่ใช่ตัวเลขสุ่ม */
+const BOOT_COUNT = 23, BOOT_LAST = 16;
+const BOOT_MS = 3200;                       // เวลาขั้นต่ำที่หลอดเดิน 0 -> 100%
+const bootCtx = bootCanvas.getContext('2d');
+const bootImgs = new Array(BOOT_COUNT).fill(null);
+let bootDrawn = -1, bootLoaded = 0;
 
-let progress = 0, bootLoaded = false;
-bootReady.then(() => { bootLoaded = true; });
+function drawBoot(i) {
+  if (i === bootDrawn || !bootImgs[i]) return;
+  bootCtx.drawImage(bootImgs[i], 0, 0, bootCanvas.width, bootCanvas.height);
+  bootDrawn = i;
+}
+for (let i = 0; i < BOOT_COUNT; i++) {
+  const im = new Image();
+  im.src = `loadboot_${i}.jpg`;
+  const done = () => { bootImgs[i] = im.naturalWidth ? im : null; bootLoaded++; if (i === 0) drawBoot(0); };
+  (im.decode ? im.decode() : Promise.resolve()).then(done, done);   // decode ล่วงหน้า ตอนสลับเฟรมจะไม่กระตุก
+}
 
-const timer = setInterval(() => {
-  progress += Math.ceil(Math.random() * 3);
-  if (progress >= 100) progress = bootLoaded ? 100 : 99;   // รอรูปโหลดครบก่อนถึง 100%
-
-  let f = 0;
-  BOOT_STEPS.forEach((t, i) => { if (progress >= t) f = i; });
-  bootFrame.src = BOOT_FRAMES[f];
-
-  if (progress === 100) {
-    clearInterval(timer);
-    // โชว์ปุ่ม PLAY แล้ววนเฟรม 9,10,11,10 ให้เรืองแสง
-    const glow = [9, 10, 11, 10];
-    let g = 0;
-    bootFrame.src = BOOT_FRAMES[glow[0]];
-    playBtn.hidden = false;
-    setInterval(() => { g = (g + 1) % glow.length; bootFrame.src = BOOT_FRAMES[glow[g]]; }, 380);
+const GLOW = [18, 19, 20, 21, 22, 21, 20, 19];
+let bootT0 = null, bootDone = false;
+function bootTick(now) {
+  if (bootT0 === null) bootT0 = now;
+  const t = now - bootT0;
+  if (!bootDone) {
+    const p = Math.min(1, t / BOOT_MS);
+    const want = Math.floor(p * BOOT_LAST + 1e-6);
+    // เลื่อนเฟรมตามเวลา; ถ้าเฟรมนั้นยังโหลดไม่เสร็จ ให้ค้างเฟรมก่อนหน้า
+    let f = Math.max(0, bootDrawn);
+    while (f < want && bootImgs[f + 1]) f++;
+    drawBoot(f);
+    if (p >= 1 && bootLoaded >= BOOT_COUNT && bootDrawn >= BOOT_LAST) {
+      bootDone = true; bootT0 = now;
+    }
+  } else if (t < 360) {
+    drawBoot(17);                                   // หลอด -> ปุ่ม PLAY
+  } else {
+    if (playBtn.hidden) playBtn.hidden = false;
+    drawBoot(GLOW[Math.floor((t - 360) / 130) % GLOW.length]);
   }
-}, 80);
+  if (loading.classList.contains('active')) requestAnimationFrame(bootTick);
+}
+requestAnimationFrame(bootTick);
 
 playBtn.addEventListener('click', () => {
   loading.classList.remove('active');
